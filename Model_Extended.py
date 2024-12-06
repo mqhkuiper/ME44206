@@ -110,9 +110,9 @@ for i in N:
             m.addConstr(x[i, j, v] * (t[i, v] + c[i][j] + s[i] - t[j, v]) <= 0)
 
 # Start from and return to the depot
-for v in V:
-    m.addConstr(quicksum(x[0, j, v] for j in N) == 1)
-    m.addConstr(quicksum(x[i, len(C) + 1, v] for i in N) == 1)
+#for v in V:
+#    m.addConstr(quicksum(x[0, j, v] for j in N) == 1)
+#   m.addConstr(quicksum(x[i, len(C) + 1, v] for i in N) == 1)
 
 
 
@@ -121,24 +121,46 @@ m.Params.timeLimit = 1800
 m.optimize()
 
 if m.status == GRB.Status.OPTIMAL:
-    # Extract and display results
+
+    m.write('VRPModelTW.sol')
+
+    # Plot the routes that are decided to be traversed
     arc_solution = m.getAttr('x', x)
 
-    # Plot the routes
-    fig = plt.figure(figsize=(10, 10))
-    plt.scatter(mx[1:-1], my[1:-1], c='blue')
-    plt.scatter(mx[0], my[0], c='green', marker='s')  # Start depot
-    plt.scatter(mx[-1], my[-1], c='red', marker='s')  # End depot
-
-    for i in N:
-        for j in N:
-            for v in V:
+    fig = plt.figure(figsize=(15, 15))
+    plt.xlabel('x-coordinate')
+    plt.ylabel('y-coordinate')
+    plt.scatter(mx[1:len(N)], my[1:len(N)])
+    for i in range(1, len(N)):
+        plt.annotate(str(i), (mx[i], my[i]))
+    plt.plot(mx[0], my[0], c='g', marker='s')
+    #
+    for i in range(len(N)):
+        for j in range(len(N)):
+            for v in range(len(V)):
                 if arc_solution[i, j, v] > 0.99:
                     plt.plot([mx[i], mx[j]], [my[i], my[j]], 'r--')
-
-    plt.xlabel("X-coordinate")
-    plt.ylabel("Y-coordinate")
-    plt.title("Vehicle Routes")
     plt.show()
+    #YOU CAN SAVE YOUR PLOTS SOMEWHERE IF YOU LIKE
+    #plt.savefig('Plots/TSP.png',bbox_inches='tight')
 
-    print(f"Objective Value: {m.objVal}")
+    for v in V:
+        route = m.getAttr('x', t)
+        route_picked = m.getAttr('x', z)
+        route_array = []
+        for i in N:
+            if route[i, v] > 0.99 and route_picked[i, v] > 0.99:
+                route_array.append([i, t[i, v].X])
+        route_sorted = sorted(route_array, key=lambda ele: ele[1])
+        load = 0
+        for i in route_sorted:
+            loc = i[0]
+            i.append(load)
+            load += d[loc]
+            if loc == len(C) + 1:
+                i[0] = 'Depot'
+        conc_str = 'Loc-Depot>' + '>'.join('Loc' + str(a) + ' visited at T' + str(b) + ' with load Q' + str(c) for a, b, c in route_sorted)
+        print("Node route of vehicle ", v, " is ", conc_str)
+    print('Obj: %g' % m.objVal)
+    Totaldistance = sum(c[i][j] * x[i, j, v].X for i in N for j in N for v in V)
+    print('Total distance traveled: ', Totaldistance)
