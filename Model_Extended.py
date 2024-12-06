@@ -14,7 +14,8 @@ for line in data:
     words = line.split()
     words = [int(i) for i in words]
     VRP.append(words)
-
+VRP.append(VRP[-0][:])
+VRP[len(VRP)-1][0] = len(VRP)-1
 VRP = np.array(VRP)
 
 # Parsing the data structure
@@ -58,7 +59,7 @@ for i in N:
         t[i, v] = m.addVar(vtype=GRB.CONTINUOUS, lb=0, name=f"T_{i},{v}")
 
 y = {}
-for j in C:
+for j in N:
     for t_index in range(NUM_TW[j]):
         for v in V:
             y[j, t_index, v] = m.addVar(vtype=GRB.BINARY, name=f"Y_{j},{t_index},{v}")
@@ -74,13 +75,17 @@ for j in C:
     m.addConstr(quicksum(y[j, t, v] for t in range(NUM_TW[j]) for v in V) == 1)
 
 # Link z and y variables
-for j in C:
+for j in N:
     for v in V:
         m.addConstr(z[j, v] == quicksum(y[j, t, v] for t in range(NUM_TW[j])))
 
 # Depot constraints
 m.addConstr(quicksum(z[0, v] for v in V) == len(V))
 m.addConstr(quicksum(z[len(C) + 1, v] for v in V) == len(V))
+
+for j in N:
+    for v in V:
+        m.addConstr(quicksum(x[i, j, v] for i in N) == z[j, v], name='ArcOut_%s,%s' % (i, v))
 
 # Route continuity
 for h in C:
@@ -92,18 +97,17 @@ for v in V:
     m.addConstr(quicksum(d[j] * z[j, v] for j in C) <= Q)
 
 # Time window constraints
-for j in C:
-    for t_index in range(NUM_TW[j]):
-        for v in V:
-            m.addConstr(y[j, t_index, v] * r[j, t_index] <= t[j, v])
-            m.addConstr(t[j, v] <= y[j, t_index, v] * e[j, t_index])
+for j in N:
+    for v in V:
+        for t_index in range(NUM_TW[j]):
+            m.addConstr(y[j, t_index, v] * t[j, v] >= y[j, t_index, v] * r[j][t_index])
+            m.addConstr(y[j, t_index, v] * t[j, v] <= y[j, t_index, v] * e[j][t_index])
 
 # Travel time feasibility
 for i in N:
     for j in N:
-        if i != j:
-            for v in V:
-                m.addConstr(x[i, j, v] * (t[i, v] + c[i][j] + s[i] - t[j, v]) <= 0)
+        for v in V:
+            m.addConstr(x[i, j, v] * (t[i, v] + c[i][j] + s[i] - t[j, v]) <= 0)
 
 # Start from and return to the depot
 for v in V:
