@@ -22,7 +22,7 @@ VRP = np.array(VRP)
 N = VRP[:, 0]  # Nodes (including depot)
 C = VRP[1:-1, 0]  # Customers/Locations
 V = [0, 1]  # Vehicles
-Q = 130  # Vehicle capacity
+Q = 70  # Vehicle capacity
 d = VRP[:, 3]  # Demand
 s = VRP[:, 4]  # Service time
 NUM_TW = VRP[:, 5]  # Number of time windows per location
@@ -109,13 +109,6 @@ for i in N:
         for v in V:
             m.addConstr(x[i, j, v] * (t[i, v] + c[i][j] + s[i] - t[j, v]) <= 0)
 
-# Start from and return to the depot
-#for v in V:
-#    m.addConstr(quicksum(x[0, j, v] for j in N) == 1)
-#   m.addConstr(quicksum(x[i, len(C) + 1, v] for i in N) == 1)
-
-
-
 m.update()
 m.Params.timeLimit = 1800
 m.optimize()
@@ -130,16 +123,22 @@ if m.status == GRB.Status.OPTIMAL:
     fig = plt.figure(figsize=(15, 15))
     plt.xlabel('x-coordinate')
     plt.ylabel('y-coordinate')
-    plt.scatter(mx[1:len(N)], my[1:len(N)])
-    for i in range(1, len(N)):
-        plt.annotate(str(i), (mx[i], my[i]))
-    plt.plot(mx[0], my[0], c='g', marker='s')
+    plt.scatter(mx[0:len(N)], my[0:len(N)])
+    for i in range(0, len(N)):
+        if i == 0 or i == len(N)-1:
+            plt.annotate('Depot', (mx[i], my[i]), fontsize=20)
+        else:
+            plt.annotate(str(i), (mx[i], my[i]), fontsize=20)
     #
+    path_colors = ['r--', 'b--', 'g--', 'm--', 'c--']
     for i in range(len(N)):
         for j in range(len(N)):
             for v in range(len(V)):
                 if arc_solution[i, j, v] > 0.99:
-                    plt.plot([mx[i], mx[j]], [my[i], my[j]], 'r--')
+                    plt.plot([mx[i], mx[j]], [my[i], my[j]], path_colors[v], label='Vehicle ' + str(v + 1))
+                    handles, labels = plt.gca().get_legend_handles_labels()
+                    by_label = dict(zip(labels, handles))
+                    plt.legend(by_label.values(), by_label.keys())
     plt.show()
     #YOU CAN SAVE YOUR PLOTS SOMEWHERE IF YOU LIKE
     #plt.savefig('Plots/TSP.png',bbox_inches='tight')

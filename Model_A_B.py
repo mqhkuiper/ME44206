@@ -5,6 +5,7 @@ import math
 import copy
 import pandas as pd
 import matplotlib.pyplot as plt
+from holoviews.plotting.bokeh.styles import font_size
 
 #from matplotlib import rc
 #rc('text', usetex=True)
@@ -141,16 +142,23 @@ if m.status == GRB.Status.OPTIMAL:
     fig = plt.figure(figsize=(15, 15))
     plt.xlabel('x-coordinate')
     plt.ylabel('y-coordinate')
-    plt.scatter(mx[1:len(N)], my[1:len(N)])
-    for i in range(1, len(N)):
-        plt.annotate(str(i), (mx[i], my[i]))
-    plt.plot(mx[0], my[0], c='g', marker='s')
+    plt.scatter(mx[0:len(N)], my[0:len(N)])
+    for i in range(0, len(N)):
+        if i == 0 or i == len(N)-1:
+            plt.annotate('Depot', (mx[i], my[i]), fontsize=20)
+        else:
+            plt.annotate(str(i), (mx[i], my[i]), fontsize=20)
+    # plt.plot(mx[0], my[0], c='g', marker='s')
     #
+    path_colors = ['r--', 'b--', 'g--', 'm--', 'c--']
     for i in range(len(N)):
         for j in range(len(N)):
             for v in range(len(V)):
                 if arc_solution[i, j, v] > 0.99:
-                    plt.plot([mx[i], mx[j]], [my[i], my[j]], 'r--')
+                    plt.plot([mx[i], mx[j]], [my[i], my[j]], path_colors[v], label='Vehicle ' + str(v + 1))
+                    handles, labels = plt.gca().get_legend_handles_labels()
+                    by_label = dict(zip(labels, handles))
+                    plt.legend(by_label.values(), by_label.keys())
     plt.show()
     #YOU CAN SAVE YOUR PLOTS SOMEWHERE IF YOU LIKE
     #plt.savefig('Plots/TSP.png',bbox_inches='tight')
@@ -173,5 +181,6 @@ if m.status == GRB.Status.OPTIMAL:
         conc_str = 'Loc-Depot>' + '>'.join('Loc' + str(a) + ' visited at T' + str(b) + ' with load Q' + str(c) for a, b, c in route_sorted)
         print("Node route of vehicle ", v, " is ", conc_str)
     print('Obj: %g' % m.objVal)
-    Totaldistance = sum(c[i][j] * x[i, j, v].X for i in N for j in N for v in V)
-    print('Total distance traveled: ', Totaldistance)
+    for v in V:
+        Totaldistance = sum(c[i][j] * x[i, j, v].X for i in N for j in N)
+        print('Total distance traveled for vehicle ' + str(v) + ': ', Totaldistance)
