@@ -5,7 +5,6 @@ import math
 import copy
 import pandas as pd
 import matplotlib.pyplot as plt
-from holoviews.plotting.bokeh.styles import font_size
 
 #from matplotlib import rc
 #rc('text', usetex=True)
