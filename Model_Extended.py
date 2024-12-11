@@ -2,6 +2,7 @@ from gurobipy import *
 import numpy as np
 import math
 import matplotlib.pyplot as plt
+import pandas as pd
 
 # ============================================MODEL DATA============================================
 
@@ -35,7 +36,7 @@ my = VRP[:, 2]  # Y-position of nodes
 c = np.zeros((len(N), len(N)))
 for i in N:
     for j in N:
-        c[i][j] = int(math.sqrt((mx[j] - mx[i]) ** 2 + (my[j] - my[i]) ** 2))
+        c[i][j] = float(math.sqrt((mx[j] - mx[i]) ** 2 + (my[j] - my[i]) ** 2))
 
 # =========================================OPTIMIZATION MODEL========================================
 
@@ -163,3 +164,63 @@ if m.status == GRB.Status.OPTIMAL:
     print('Obj: %g' % m.objVal)
     Totaldistance = sum(c[i][j] * x[i, j, v].X for i in N for j in N for v in V)
     print('Total distance traveled: ', Totaldistance)
+
+
+
+# Create a DataFrame for vehicle routes
+routes_data = []
+
+for v in V:
+    route = m.getAttr('x', t)
+    route_picked = m.getAttr('x', z)
+    route_array = []
+    for i in N:
+        if route[i, v] > 0.99 and route_picked[i, v] > 0.99:
+            route_array.append([i, t[i, v].X])
+    route_sorted = sorted(route_array, key=lambda ele: ele[1])
+    
+    load = 0
+    sequence = []
+    node_distances = []  # To store distances between consecutive nodes in the route
+    
+    # Process the sorted route
+    for idx in range(len(route_sorted)):
+        loc = route_sorted[idx][0]
+        load += d[loc]
+        sequence.append({
+            "Location": loc if loc != len(C) + 1 else "Depot",
+            "Load After Visit": load
+        })
+        if idx == 0:  # First movement from depot to the first node
+            node_distances.append(c[0][loc])  # Distance from depot to the first node
+        else:  # Subsequent movements
+            prev_loc = route_sorted[idx - 1][0]
+            node_distances.append(c[prev_loc][loc])
+    
+    total_distance = sum(c[i][j] * x[i, j, v].X for i in N for j in N)
+    total_load = load  # Final load after completing the route
+    route_description = " -> ".join(
+        f"{step['Location']} (Load: {step['Load After Visit']})" for step in sequence
+    )
+    distance_description = " -> ".join(f"{dist:.2f}" for dist in node_distances)
+    
+    routes_data.append({
+        "Vehicle": v,
+        "Route Sequence": route_description,
+        "Node Distances": distance_description,
+        "Total Distance": total_distance,
+        "Total Load": total_load
+    })
+
+# Create DataFrame
+
+print(routes_data)
+routes_df = pd.DataFrame(routes_data)
+
+# Save the DataFrame to an Excel file
+file_path = "vehicle_routes_with_distances_model_extended.xlsx"
+routes_df.to_excel(file_path, index=False)
+
+# Display the DataFrame
+print(routes_df)
+print(f"Excel file 'vehicle_routes_with_distances.xlsx' created at: {file_path}")
