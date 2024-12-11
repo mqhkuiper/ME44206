@@ -168,6 +168,7 @@ if m.status == GRB.Status.OPTIMAL:
 
 
 # Create a DataFrame for vehicle routes
+# Create a DataFrame for vehicle routes
 routes_data = []
 
 for v in V:
@@ -182,14 +183,18 @@ for v in V:
     load = 0
     sequence = []
     node_distances = []  # To store distances between consecutive nodes in the route
+    arrival_times = []  # To store arrival times at each node
     
     # Process the sorted route
     for idx in range(len(route_sorted)):
         loc = route_sorted[idx][0]
+        arrival_time = route_sorted[idx][1]  # Extract time of arrival
+        arrival_times.append(arrival_time)
         load += d[loc]
         sequence.append({
             "Location": loc if loc != len(C) + 1 else "Depot",
-            "Load After Visit": load
+            "Load After Visit": load,
+            "Arrival Time": arrival_time
         })
         if idx == 0:  # First movement from depot to the first node
             node_distances.append(c[0][loc])  # Distance from depot to the first node
@@ -200,27 +205,30 @@ for v in V:
     total_distance = sum(c[i][j] * x[i, j, v].X for i in N for j in N)
     total_load = load  # Final load after completing the route
     route_description = " -> ".join(
-        f"{step['Location']} (Load: {step['Load After Visit']})" for step in sequence
+        f"{step['Location']} (Load: {step['Load After Visit']}, Time: {step['Arrival Time']:.2f})" 
+        for step in sequence
     )
     distance_description = " -> ".join(f"{dist:.2f}" for dist in node_distances)
+    arrival_description = " -> ".join(f"{time:.2f}" for time in arrival_times)
     
     routes_data.append({
         "Vehicle": v,
         "Route Sequence": route_description,
         "Node Distances": distance_description,
+        "Arrival Times": arrival_description,
         "Total Distance": total_distance,
         "Total Load": total_load
     })
 
 # Create DataFrame
-
 print(routes_data)
+
 routes_df = pd.DataFrame(routes_data)
 
 # Save the DataFrame to an Excel file
-file_path = "vehicle_routes_with_distances_model_extended.xlsx"
+file_path = "vehicle_routes_with_distances_and_times_extended.xlsx"
 routes_df.to_excel(file_path, index=False)
 
 # Display the DataFrame
 print(routes_df)
-print(f"Excel file 'vehicle_routes_with_distances.xlsx' created at: {file_path}")
+print(f"Excel file 'vehicle_routes_with_distances_and_times.xlsx' created at: {file_path}")
