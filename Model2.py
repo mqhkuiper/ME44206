@@ -4,6 +4,8 @@ import math
 import matplotlib.pyplot as plt
 import pandas as pd
 
+from arrows import draw_arrows, path_colors
+
 # ============================================MODEL DATA============================================
 
 # Load data from file
@@ -23,7 +25,7 @@ VRP = np.array(VRP)
 N = VRP[:, 0]  # Nodes (including depot)
 C = VRP[1:-1, 0]  # Customers/Locations
 V = [0, 1]  # Vehicles
-Q = 130  # Vehicle capacity
+Q = 130    # Vehicle capacity
 d = VRP[:, 3]  # Demand
 s = VRP[:, 4]  # Service time
 NUM_TW = VRP[:, 5]  # Number of time windows per location
@@ -81,12 +83,15 @@ for j in N:
         m.addConstr(z[j, v] == quicksum(y[j, t, v] for t in range(NUM_TW[j])))
 
 # Depot constraints
-m.addConstr(quicksum(z[0, v] for v in V) == len(V))
-m.addConstr(quicksum(z[len(C) + 1, v] for v in V) == len(V))
+for v in V:
+    m.addConstr(quicksum(x[0, j, v] for j in N) == 1, name='VisitDepot_%s' % 0)
+
+for v in V:
+    m.addConstr(quicksum(x[i, len(C)+1, v] for i in N) == 1, name='VisitDepot2_%s' % 0)
 
 for j in N:
     for v in V:
-        m.addConstr(quicksum(x[i, j, v] for i in N) == z[j, v], name='ArcOut_%s,%s' % (i, v))
+        m.addConstr(quicksum(x[i, j, v] for i in N) == z[j, v], name='ArcOut_%s,%s' % (j, v))
 
 # Route continuity
 for h in C:
@@ -130,8 +135,7 @@ if m.status == GRB.Status.OPTIMAL:
             plt.annotate('Depot', (mx[i], my[i]), fontsize=20)
         else:
             plt.annotate(str(i), (mx[i], my[i]), fontsize=20)
-    #
-    path_colors = ['r--', 'b--', 'g--', 'm--', 'c--']
+
     for i in range(len(N)):
         for j in range(len(N)):
             for v in range(len(V)):
@@ -140,6 +144,8 @@ if m.status == GRB.Status.OPTIMAL:
                     handles, labels = plt.gca().get_legend_handles_labels()
                     by_label = dict(zip(labels, handles))
                     plt.legend(by_label.values(), by_label.keys())
+                    draw_arrows([mx[i], mx[j]], [my[i], my[j]], path_colors[v])
+
     plt.show()
     #YOU CAN SAVE YOUR PLOTS SOMEWHERE IF YOU LIKE
     #plt.savefig('Plots/TSP.png',bbox_inches='tight')
@@ -165,9 +171,6 @@ if m.status == GRB.Status.OPTIMAL:
     Totaldistance = sum(c[i][j] * x[i, j, v].X for i in N for j in N for v in V)
     print('Total distance traveled: ', Totaldistance)
 
-
-
-# Create a DataFrame for vehicle routes
 # Create a DataFrame for vehicle routes
 routes_data = []
 
@@ -226,7 +229,7 @@ print(routes_data)
 routes_df = pd.DataFrame(routes_data)
 
 # Save the DataFrame to an Excel file
-file_path = "vehicle_routes_with_distances_and_times_2.xlsx"
+file_path = "vehicle_routes_with_distances_and_times_extended.xlsx"
 routes_df.to_excel(file_path, index=False)
 
 # Display the DataFrame

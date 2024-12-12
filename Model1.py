@@ -6,6 +6,8 @@ import copy
 import pandas as pd
 import matplotlib.pyplot as plt
 
+from arrows import draw_arrows, path_colors
+
 #from matplotlib import rc
 #rc('text', usetex=True)
 #import os
@@ -94,8 +96,14 @@ for i in C:
     m.addConstr(quicksum(z[i, v] for v in V) == 1, name='Visit_%s' % i)
 
 # All vehicles should have the depot in their route at the start and also end at the depot (C + 1)
-m.addConstr(quicksum(z[0, v] for v in V) == len(V), name='VisitDepot_%s' % 0)
-m.addConstr(quicksum(z[len(C)+1, v] for v in V) == len(V), name='VisitDepot2_%s' % 0)
+# m.addConstr(quicksum(z[0, v] for v in V) == len(V), name='VisitDepot_%s' % 0)
+# m.addConstr(quicksum(z[len(C)+1, v] for v in V) == len(V), name='VisitDepot2_%s' % 0)
+
+for v in V:
+    m.addConstr(quicksum(x[0, j, v] for j in N) == 1, name='VisitDepot_%s' % 0)
+
+for v in V:
+    m.addConstr(quicksum(x[i, len(C)+1, v] for i in N) == 1, name='VisitDepot2_%s' % 0)
 
 # All vehicles that go into a loc, also have to leave the loc (in--->loc--->out)
 for h in C:
@@ -148,8 +156,7 @@ if m.status == GRB.Status.OPTIMAL:
         else:
             plt.annotate(str(i), (mx[i], my[i]), fontsize=20)
     # plt.plot(mx[0], my[0], c='g', marker='s')
-    #
-    path_colors = ['r--', 'b--', 'g--', 'm--', 'c--']
+
     for i in range(len(N)):
         for j in range(len(N)):
             for v in range(len(V)):
@@ -158,6 +165,8 @@ if m.status == GRB.Status.OPTIMAL:
                     handles, labels = plt.gca().get_legend_handles_labels()
                     by_label = dict(zip(labels, handles))
                     plt.legend(by_label.values(), by_label.keys())
+                    draw_arrows([mx[i], mx[j]], [my[i], my[j]], path_colors[v])
+
     plt.show()
     #YOU CAN SAVE YOUR PLOTS SOMEWHERE IF YOU LIKE
     #plt.savefig('Plots/TSP.png',bbox_inches='tight')
@@ -183,13 +192,6 @@ if m.status == GRB.Status.OPTIMAL:
     for v in V:
         Totaldistance = sum(c[i][j] * x[i, j, v].X for i in N for j in N)
         print('Total distance traveled for vehicle ' + str(v) + ': ', Totaldistance)
-
-    
-        # Create a DataFrame for vehicle routes
-
-
-
-# Create a DataFrame for vehicle routes
 
 # Create a DataFrame for vehicle routes
 routes_data = []
@@ -249,7 +251,7 @@ print(routes_data)
 routes_df = pd.DataFrame(routes_data)
 
 # Save the DataFrame to an Excel file
-file_path = "vehicle_routes_with_distances_and_times_1.xlsx"
+file_path = "vehicle_routes_with_distances_and_times.xlsx"
 routes_df.to_excel(file_path, index=False)
 
 # Display the DataFrame
