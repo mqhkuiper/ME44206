@@ -18,14 +18,14 @@ for line in data:
     words = [int(i) for i in words]
     VRP.append(words)
 VRP.append(VRP[-0][:])
-VRP[len(VRP) - 1][0] = len(VRP) - 1
+VRP[len(VRP)-1][0] = len(VRP)-1
 VRP = np.array(VRP)
 
 # Parsing the data structure
 N = VRP[:, 0]  # Nodes (including depot)
 C = VRP[1:-1, 0]  # Customers/Locations
 V = [0, 1, 2]  # Vehicles
-Q = 65  # Vehicle capacity
+Q = 65    # Vehicle capacity
 d = VRP[:, 3]  # Demand
 s = VRP[:, 4]  # Service time
 NUM_TW = VRP[:, 5]  # Number of time windows per location
@@ -39,6 +39,7 @@ c = np.zeros((len(N), len(N)))
 for i in N:
     for j in N:
         c[i][j] = float(math.sqrt((mx[j] - mx[i]) ** 2 + (my[j] - my[i]) ** 2))
+
 
 # =========================================OPTIMIZATION MODEL========================================
 
@@ -64,7 +65,7 @@ for i in N:
 f = {}
 for i in N:
     for v in V:
-        f[i, v] = m.addVar(vtype=GRB.CONTINUOUS, lb=0, name=f"F_{i},{v}")
+        f[i, v] = m.addVar(vtype=GRB.CONTINUOUS, lb=0, ub=1, name=f"F_{i},{v}")
 
 y = {}
 for j in N:
@@ -108,9 +109,9 @@ for h in C:
 for v in V:
     m.addConstr(quicksum(d[j] * z[j, v] * f[j, v] for j in C) <= Q)
 
-for j in C:
-    for v in V:
-        m.addConstr(f[j, v] <= 1)
+# for j in C:
+#     for v in V:
+#         m.addConstr(f[j, v] <= 1)
 
 for j in C:
     m.addConstr(quicksum(f[j, v] * d[j] * z[j, v] for v in V) >= d[j])
@@ -246,7 +247,7 @@ print(routes_data)
 routes_df = pd.DataFrame(routes_data)
 
 # Save the DataFrame to an Excel file
-file_path = "vehicle_routes_with_distances_and_times_extended.xlsx"
+file_path = "vehicle_routes_with_distances_and_times_3.xlsx"
 routes_df.to_excel(file_path, index=False)
 
 # Display the DataFrame
